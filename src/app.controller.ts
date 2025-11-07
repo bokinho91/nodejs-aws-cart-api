@@ -7,6 +7,7 @@ import {
   HttpStatus,
   Body,
   HttpCode,
+  Inject,
 } from '@nestjs/common';
 import {
   LocalAuthGuard,
@@ -19,10 +20,12 @@ import { AppRequest } from './shared';
 
 @Controller()
 export class AppController {
-  constructor(private authService: AuthService) {}
+  constructor(@Inject(AuthService) private readonly authService: AuthService) {
+    console.log('AppController constructor - authService:', this.authService);
+  }
 
   @Get(['', 'ping'])
-  healthCheck() {
+  healthCheck () {
     return {
       statusCode: HttpStatus.OK,
       message: 'OK',
@@ -32,14 +35,23 @@ export class AppController {
   @Post('api/auth/register')
   @HttpCode(HttpStatus.CREATED)
   // TODO ADD validation
-  register(@Body() body: User) {
-    return this.authService.register(body);
+  register (@Body() body: User) {
+    console.log('Register endpoint called with:', body);
+    console.log('AuthService:', this.authService);
+    try {
+      const result = this.authService.register(body);
+      console.log('Register result:', result);
+      return result;
+    } catch (error) {
+      console.error('Register error:', error);
+      throw error;
+    }
   }
 
   @UseGuards(LocalAuthGuard)
   @HttpCode(200)
   @Post('api/auth/login')
-  async login(@Request() req: AppRequest) {
+  async login (@Request() req: AppRequest) {
     const token = this.authService.login(req.user, 'basic');
 
     return token;
@@ -47,7 +59,7 @@ export class AppController {
 
   @UseGuards(BasicAuthGuard)
   @Get('api/profile')
-  async getProfile(@Request() req: AppRequest) {
+  async getProfile (@Request() req: AppRequest) {
     return {
       user: req.user,
     };
